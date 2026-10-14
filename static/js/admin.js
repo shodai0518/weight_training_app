@@ -1,7 +1,7 @@
 // トレーナー用の管理画面（受信箱・メニュー・チームの管理）
 
 import {
-  $, api, avatar, closeSheet, esc, formatDay, formatTime, icon, kindFieldsHtml, menuPeriodHtml, menuPhotosHtml, openSheet, pad,
+  $, api, avatar, closeSheet, esc, groupByPosition, positionTag, formatDay, formatTime, icon, kindFieldsHtml, menuPeriodHtml, menuPhotosHtml, openSheet, pad,
   readKindFields, run, shrinkPhoto, state, toast,
 } from "./api.js";
 import { bindPosts, parts, postBody, postHead } from "./timeline.js";
@@ -37,7 +37,7 @@ async function renderInbox(body, { openFirst = false } = {}) {
   body.innerHTML = `<p class="inbox-count">まだ見ていない投稿　あと <strong>${inbox.total}</strong> 件</p>
     <div class="card list">${inbox.posts.map((post) => `
       <button type="button" class="list-row inbox-row" data-review="${post.id}">
-        <span class="list-main"><span class="who-line">${avatar(post.user)}<strong>${esc(post.user.name)}</strong></span><time>${formatTime(post.created_at)}</time></span>
+        <span class="list-main"><span class="who-line">${avatar(post.user)}<strong>${esc(post.user.name)}</strong>${positionTag(post.user)}</span><time>${formatTime(post.created_at)}</time></span>
         <span class="row-body${post.body ? "" : " empty"}">${post.body ? esc(post.body) : "（ひとこと なし）"}</span>
       </button>`).join("")}</div>`;
   const open = (post) => openReview(body, post, replies);
@@ -198,10 +198,15 @@ async function renderMenus(body) {
           <button type="button" data-target-mode="all" class="${draftTargets ? "" : "on"}">チーム全員</button>
           <button type="button" data-target-mode="pick" class="${draftTargets ? "on" : ""}">人を選ぶ</button>
         </div>
-        <div id="target-list" class="target-list"${draftTargets ? "" : " hidden"}>${people.map((u) => `
-          <label class="check"><input type="checkbox" value="${u.id}"${draftTargets?.includes(u.id) ? " checked" : ""}>
-            ${avatar(u)}<span>${esc(u.name)}</span>${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}</label>`).join("")
-          || '<p class="hint">まだ メンバーが いません</p>'}</div>
+        <div id="target-list"${draftTargets ? "" : " hidden"}>
+          <p class="hint">ポジションの名前を押すと、そのポジションの人を まとめて 選べます</p>
+          ${groupByPosition(people).map((g) => `<div class="target-group">
+            <button type="button" class="chip" data-pick-group="${esc(g.label)}">${esc(g.label)}（${g.members.length}人）</button>
+            <div class="target-list">${g.members.map((u) => `
+              <label class="check"><input type="checkbox" value="${u.id}" data-group="${esc(g.label)}"${draftTargets?.includes(u.id) ? " checked" : ""}>
+                ${avatar(u)}<span>${esc(u.name)}</span>${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}</label>`).join("")}</div>
+          </div>`).join("") || '<p class="hint">まだ メンバーが いません</p>'}
+        </div>
       </div>
       <div id="menu-thumbs" class="thumbs"></div>
       <label class="button small file">${icon("camera")}メニューの写真を足す（${MENU_MAX_PHOTOS}枚まで）
@@ -278,6 +283,20 @@ async function renderMenus(body) {
     $("#target-list", body).hidden = !pick;
   }));
   $("#target-list", body).addEventListener("change", () => (draftTargets = readTargets()));
+  // ポジションの名前を押すと、そのポジションの人を まとめて 選ぶ（みんな選ばれていたら まとめて外す）
+  const markGroups = () => body.querySelectorAll("[data-pick-group]").forEach((chip) => {
+    const boxes = [...body.querySelectorAll(`#target-list input[data-group="${CSS.escape(chip.dataset.pickGroup)}"]`)];
+    chip.classList.toggle("on", boxes.length > 0 && boxes.every((b) => b.checked));
+  });
+  body.querySelectorAll("[data-pick-group]").forEach((chip) => chip.addEventListener("click", () => {
+    const boxes = [...body.querySelectorAll(`#target-list input[data-group="${CSS.escape(chip.dataset.pickGroup)}"]`)];
+    const all = boxes.every((b) => b.checked);
+    boxes.forEach((b) => (b.checked = !all));
+    draftTargets = readTargets();
+    markGroups();
+  }));
+  $("#target-list", body).addEventListener("change", markGroups);
+  markGroups();
 
   $("#menu-part", body).addEventListener("change", (event) => {
     draftPart = event.target.value;
@@ -356,12 +375,15 @@ async function renderTeam(body) {
     </div>`).join("");
   const users = team.users.map((u) => `
     <div class="member-row${u.active ? "" : " off"}" data-user="${u.id}">
-      <div><strong>${esc(u.name)}</strong> <span class="hint">${esc(u.login_id)}</span>
+      <div><strong>${esc(u.name)}</strong>${positionTag(u)} <span class="hint">${esc(u.login_id)}</span>
         ${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}${u.active ? "" : '<span class="hint">（使えなくした）</span>'}
         <div class="hint">${u.last_day ? `最後：${formatDay(u.last_day)}・この7日 ${u.week_count}回` : "まだ記録なし"}</div></div>
       ${u.me ? '<span class="hint">自分</span>' : `<div class="row wrap">
         ${u.active ? `<button type="button" class="small" data-role="${u.role === "trainer" ? "member" : "trainer"}">
           ${u.role === "trainer" ? "選手にする" : "トレーナーにする"}</button>` : ""}
+        ${team.positions.length && u.role === "member" && u.active ? `<select class="position-select" data-position aria-label="ポジション">
+          <option value="">ポジション未設定</option>${team.positions.map((p) => `<option${p === u.position ? " selected" : ""}>${esc(p)}</option>`).join("")}
+        </select>` : ""}
         <button type="button" class="small" data-active="${u.active ? 0 : 1}">${u.active ? "使えなくする" : "使えるようにする"}</button>
         ${u.active ? '<button type="button" class="small" data-reset>仮のパスワード</button>' : ""}
       </div>`}
@@ -446,6 +468,7 @@ async function renderTeam(body) {
       await reload();
     });
     $("[data-role]", row)?.addEventListener("click", (event) => patch(event.currentTarget, { role: event.currentTarget.dataset.role }));
+    $("[data-position]", row)?.addEventListener("change", (event) => patch(event.currentTarget, { position: event.currentTarget.value }));
     $("[data-active]", row)?.addEventListener("click", (event) => {
       const active = event.currentTarget.dataset.active === "1";
       if (!active && !confirm("この人を 使えなくしますか？（記録は残ります。ログインだけ できなくなります）")) return;

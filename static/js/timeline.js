@@ -2,7 +2,7 @@
 // カードには 1枚目の写真・まとめ・スタンプ・コメントの数だけを出す。💬 を押すと 投稿のくわしい画面が開く
 
 import {
-  $, api, avatar, closeSheet, esc, formatDay, formatTime, icon, menuDetailHtml, openSheet, openWho, reactionPeople, run, shrinkPhoto, state, toast,
+  $, api, avatar, closeSheet, esc, positionTag, formatDay, formatTime, icon, menuDetailHtml, openSheet, openWho, reactionPeople, run, shrinkPhoto, state, toast,
 } from "./api.js";
 
 const TREND = { up: "↑", down: "↓", same: "→" };
@@ -10,7 +10,7 @@ const TREND = { up: "↑", down: "↓", same: "→" };
 // 名前。押すと その人のページ（履歴・伸びのグラフ）が開く
 export function userHtml(user) {
   const badge = user.role === "trainer" ? '<span class="role">トレーナー</span>' : "";
-  return `${avatar(user)}<button type="button" class="name" data-act="member" data-id="${user.id}">${esc(user.name)}</button>${badge}`;
+  return `${avatar(user)}<button type="button" class="name" data-act="member" data-id="${user.id}">${esc(user.name)}</button>${positionTag(user)}${badge}`;
 }
 
 // 筋トレのまとめ（種目ごとに セット数と いちばん強いセット。押すと 全部のセットが開く）

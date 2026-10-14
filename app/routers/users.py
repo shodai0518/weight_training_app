@@ -50,6 +50,10 @@ class TeamCreate(BaseModel):
     operator_code: str = ""
 
 
+class PositionInput(BaseModel):
+    position: str
+
+
 class Register(BaseModel):
     invite_code: str
     name: str
@@ -140,8 +144,9 @@ def unread_count(session: Session, user: User) -> int:
 def me(user: User = Depends(auth.current_user), session: Session = Depends(get_session)):
     team = session.get(Team, user.team_id)
     return {
-        "user": {**services.user_brief(user), "login_id": user.login_id},
+        "user": {**services.user_brief(user), "login_id": user.login_id},  # position も入っている
         "team": {"id": team.id, "name": team.name, "sport": team.sport},
+        "positions": services.positions_for(team.sport),
         "parts": team_parts(team),
         "kinds": config.RECORD_KINDS,
         "reactions": config.REACTIONS,
@@ -193,11 +198,29 @@ def member_row(user: User, stats: dict[int, dict]) -> dict:
     }
 
 
+@router.put("/me/position")
+def set_my_position(body: PositionInput, user: User = Depends(auth.current_user), session: Session = Depends(get_session)):
+    """自分の ポジションを決める（最初に 聞かれる。あとから「自分」で 変えられる）。"""
+    user.position = check_position(session, user.team_id, body.position)
+    session.commit()
+    return {"position": user.position}
+
+
+def check_position(session: Session, team_id: int, position: str) -> str:
+    positions = services.positions_for(services.team_sport(session, team_id))
+    if position not in positions:
+        raise HTTPException(400, "ポジションを選んでね")
+    return position
+
+
 @router.get("/members")
 def members(user: User = Depends(auth.require_trainer), session: Session = Depends(get_session)):
+    """メンバーの一覧（選手を ポジションの順に。トレーナーは 最後）。"""
     stats = member_stats(session, user.team_id)
+    positions = services.positions_for(services.team_sport(session, user.team_id))
+    by_position = services.position_order(positions)
     users = [u for u in services.team_users(session, user.team_id).values() if u.active]
-    users.sort(key=lambda u: (u.role != "member", u.name))
+    users.sort(key=lambda u: (u.role != "member", by_position(u)))
     return [member_row(u, stats) for u in users]
 
 

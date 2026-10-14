@@ -372,6 +372,18 @@ p.ex-note { margin: 4px 0 2px; padding: 6px 10px; background: var(--fill); borde
 .who-list li { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line); font-weight: 700; }
 .who-emoji { font-size: 20px; width: 28px; text-align: center; }
 
+/* ---- ポジション ---- */
+.pos { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px var(--black);
+  font-family: var(--num); font-size: 13px; font-weight: 700; line-height: 19px; letter-spacing: 0.04em; vertical-align: middle; }
+.position-picks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 4px; }
+.position-picks .chip { padding: 12px 4px; font-family: var(--num); font-size: 18px; border-radius: 14px; }
+.position-filter { margin-top: 0; }
+.group-head { display: flex; align-items: baseline; gap: 8px; margin: 16px 4px 8px; font-family: var(--num); font-size: 20px; font-weight: 700; }
+.group-head span { font-family: var(--text); font-size: 12.5px; font-weight: 500; color: var(--gray); }
+.target-group { margin-top: 10px; }
+.target-group > .chip { margin-bottom: 6px; }
+.position-select { width: auto; padding: 6px 30px 6px 10px; font-size: 13.5px; background-position: right 8px center; }
+
 /* ---- 受信箱（一覧）と、開いたときの画面 ---- */
 .inbox-row .list-main { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
 .inbox-row time { color: var(--gray); font-size: 12.5px; white-space: nowrap; }

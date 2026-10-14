@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/admin", dependencies=[Depends(auth.require_train
 class MemberUpdate(BaseModel):
     role: str | None = None
     active: bool | None = None
+    position: str | None = None  # ポジションを変える（空にすると 未設定）
     reset_password: bool = False
 
 
@@ -99,11 +100,14 @@ def review(post_id: int, user: User = Depends(auth.require_trainer), session: Se
 def team_info(user: User = Depends(auth.require_trainer), session: Session = Depends(get_session)):
     team = session.get(Team, user.team_id)
     stats = member_stats(session, user.team_id)
-    users = sorted(services.team_users(session, user.team_id).values(), key=lambda u: (not u.active, u.role != "trainer", u.name))
+    positions = services.positions_for(team.sport)
+    by_position = services.position_order(positions)
+    users = sorted(services.team_users(session, user.team_id).values(), key=lambda u: (not u.active, u.role != "trainer", by_position(u)))
     return {
         "name": team.name,
         "sport": team.sport,
         "sports": config.SPORTS,
+        "positions": positions,
         "invite_code": team.invite_code,
         "members": {"count": count_role(session, team.id, "member"), "max": team.max_members},
         "trainers": {"count": count_role(session, team.id, "trainer"), "max": team.max_trainers},
@@ -139,6 +143,11 @@ def update_member(member_id: int, body: MemberUpdate, user: User = Depends(auth.
         if count_role(session, team.id, role) >= limit:
             raise HTTPException(409, "トレーナーの人数が 上限です" if role == "trainer" else "選手の人数が 上限です")
     member.role, member.active = role, active
+    if body.position is not None:
+        positions = services.positions_for(team.sport)
+        if body.position and body.position not in positions:
+            raise HTTPException(400, "ポジションを選んでね")
+        member.position = body.position
     temporary = None
     if body.reset_password:  # 仮のパスワードを出す（前のログインは 使えなくなる）
         temporary = secrets.token_urlsafe(8)

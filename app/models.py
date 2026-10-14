@@ -27,6 +27,7 @@ class User(SQLModel, table=True):
     name: str
     password_hash: str
     role: str = "member"  # member（選手） / trainer
+    position: str = ""  # ポジション（config.SPORT_POSITIONS のどれか）。空なら まだ決めていない
     active: bool = True  # False：やめた人（記録は残して、ログインだけできなくする）
     created_at: NaiveDatetime = Field(default_factory=clock.now)
 

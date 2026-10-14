@@ -44,6 +44,10 @@ SPORTS = {
     "volleyball": "バレーボール", "rugby": "ラグビー", "track": "陸上", "swimming": "水泳", "tennis": "テニス", "other": "その他",
 }
 SPORT_PART = "sport"  # 競技の欄の 部位のキー
+# 競技ごとの ポジション（この順に 並べる）。ない競技では ポジションを聞かない
+SPORT_POSITIONS = {
+    "football": ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "DB", "K/P", "その他"],
+}
 # 競技ごとに 最初から用意する 練習（名前, 記録の仕方）。筋トレではなく、その競技の練習を入れる。
 # ない競技は、チームで足していく
 SPORT_EXERCISES = {

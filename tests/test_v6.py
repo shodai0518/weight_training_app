@@ -305,3 +305,35 @@ def test_old_sport_presets_are_removed_unless_used():
     assert coach.get(f"/api/workouts/{workout['id']}").json()["workout"]["exercises"][0]["name"] == "ハングクリーン"
     other = create_team("ブルー", "ブルーコーチ", "bluecoach")
     assert "ハングクリーン" not in exercises(other)  # ほかのチームには 出ない
+
+
+# ---- ポジション ----
+
+def test_positions_are_chosen_and_sorted():
+    coach = create_team()
+    players = {name: join(coach, name, login) for name, login in (("たなか", "tanaka"), ("すずき", "suzuki"), ("さとう", "sato"))}
+    data = players["たなか"].get("/api/me").json()
+    assert data["positions"][:3] == ["QB", "RB", "WR"] and data["user"]["position"] == ""
+    assert players["たなか"].put("/api/me/position", json={"position": "OL"}).json()["position"] == "OL"
+    assert players["すずき"].put("/api/me/position", json={"position": "QB"}).status_code == 200
+    assert players["さとう"].put("/api/me/position", json={"position": "ピッチャー"}).status_code == 400
+    # メンバーの一覧は ポジションの順（決めていない人は 選手の最後、トレーナーは その後）
+    rows = coach.get("/api/members").json()
+    assert [(m["name"], m["position"]) for m in rows] == [("すずき", "QB"), ("たなか", "OL"), ("さとう", ""), ("コーチ", "")]
+    # トレーナーが 変えられる。空にすると 未設定
+    sato = next(m for m in rows if m["name"] == "さとう")
+    assert coach.patch(f"/api/admin/members/{sato['id']}", json={"position": "DL"}).status_code == 200
+    assert coach.patch(f"/api/admin/members/{sato['id']}", json={"position": "XX"}).status_code == 400
+    team = coach.get("/api/admin/team").json()
+    assert team["positions"][-1] == "その他"
+    assert {u["name"]: u["position"] for u in team["users"]}["さとう"] == "DL"
+    # 投稿の名前にも ポジションが付く
+    post = players["たなか"].post("/api/posts", json={"workout_id": do_workout(players["たなか"], [("懸垂", None, 10)])}).json()
+    assert post["user"]["position"] == "OL"
+
+
+def test_no_positions_for_sports_without_list():
+    coach = create_team(sport="swimming")
+    player = join(coach, "たなか", "tanaka")
+    assert player.get("/api/me").json()["positions"] == []
+    assert player.put("/api/me/position", json={"position": "QB"}).status_code == 400

@@ -1,24 +1,41 @@
 // メンバーの一覧と、1人ずつのページ（筋トレの履歴・種目ごとの伸び）
 
-import { $, api, avatar, esc, formatDay, run, state, toast } from "./api.js";
+import { $, api, avatar, esc, formatDay, groupByPosition, positionTag, run, state, toast } from "./api.js";
+import { askPosition } from "./app.js";
 import * as notify from "./notify.js";
 import { summaryHtml } from "./timeline.js";
 import { renderCompose } from "./workout.js";
 
+let memberFilter = "all"; // メンバーの一覧で しぼっている ポジション
+
 export async function renderMembers(view) {
   const members = await api("/members");
   const trainer = state.me.role === "trainer";
-  view.innerHTML = `<div class="card list">${members.map((m) => {
+  const groups = groupByPosition(members);
+  if (!groups.some((g) => g.label === memberFilter)) memberFilter = "all";
+  const row = (m) => {
     const last = m.last_day ? `最後：${formatDay(m.last_day)}` : "まだ記録なし";
     const idle = trainer && m.role === "member" && m.idle ? '<span class="alert">7日以上 あいています</span>' : "";
     return `<button type="button" class="list-row" data-id="${m.id}">
-      <span class="list-main">${avatar(m)}<strong>${esc(m.name)}</strong>${m.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
+      <span class="list-main">${avatar(m)}<strong>${esc(m.name)}</strong>${positionTag(m)}${m.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
         ${m.recent_pr ? '<span class="pr">★自己ベスト</span>' : ""}${idle}</span>
       <span class="hint">${last}・この7日 ${m.week_count}回</span>
     </button>`;
-  }).join("")}</div>`;
-  view.querySelectorAll("[data-id]").forEach((row) =>
-    row.addEventListener("click", () => state.go("member", Number(row.dataset.id))));
+  };
+  const shown = groups.filter((g) => memberFilter === "all" || g.label === memberFilter);
+  view.innerHTML = `
+    ${groups.length > 1 ? `<div class="chips position-filter">
+      <button type="button" class="chip${memberFilter === "all" ? " on" : ""}" data-filter-position="all">全員 ${members.length}</button>
+      ${groups.map((g) => `<button type="button" class="chip${memberFilter === g.label ? " on" : ""}" data-filter-position="${esc(g.label)}">${esc(g.label)} ${g.members.length}</button>`).join("")}
+    </div>` : ""}
+    ${shown.map((g) => `<p class="group-head">${esc(g.label)}<span>${g.members.length}人</span></p>
+      <div class="card list">${g.members.map(row).join("")}</div>`).join("")}`;
+  view.querySelectorAll("[data-filter-position]").forEach((chip) => chip.addEventListener("click", () => {
+    memberFilter = chip.dataset.filterPosition;
+    renderMembers(view);
+  }));
+  view.querySelectorAll("[data-id]").forEach((item) =>
+    item.addEventListener("click", () => state.go("member", Number(item.dataset.id))));
 }
 
 // 折れ線グラフ（1つの種目の 見つもり1RM の伸び）
@@ -109,6 +126,8 @@ async function settingsHtml() {
     </div>
     <div class="card">
       <strong>アカウント</strong>
+      ${state.positions.length && state.me.role === "member" ? `<p class="hint">ポジション：<strong>${esc(state.me.position || "未設定")}</strong>
+        <button type="button" id="change-position" class="link">変える</button></p>` : ""}
       <p class="hint">ログインID：${esc(state.me.login_id)}</p>
       <button type="button" id="logout" class="small">ログアウト</button>
     </div>`;
@@ -131,7 +150,7 @@ export async function renderMember(view, memberId) {
   view.innerHTML = `
     ${mine ? "" : `<button type="button" class="link back">← ${trainer ? "メンバーへ" : "タイムラインへ"}</button>`}
     <div class="card">
-      <div class="row">${avatar(data.user)}<strong class="title">${esc(data.user.name)}</strong>
+      <div class="row">${avatar(data.user)}<strong class="title">${esc(data.user.name)}</strong>${positionTag(data.user)}
         ${data.user.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
         ${data.user.active ? "" : '<span class="hint">（やめた人）</span>'}</div>
     </div>
@@ -210,6 +229,7 @@ export async function renderMember(view, memberId) {
       await api("/push/test", { method: "POST" });
       toast("送りました。数秒で 届きます");
     }));
+    $("#change-position", view)?.addEventListener("click", () => askPosition({ done: () => state.go("me") }));
     $("#logout", view).addEventListener("click", (event) => run(event.currentTarget, async () => {
       await notify.disablePush().catch(() => {}); // このスマホに ほかの人の知らせが 届かないように
       await api("/logout", { method: "POST" });

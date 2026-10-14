@@ -1,6 +1,21 @@
 // アプリの入口：ログイン・タブの切りかえ・知らせ（ベル）
 
 import { $, api, closeSheet, esc, formatTime, openSheet, openWho, run, state, toast } from "./api.js";
+
+// ポジションを選ぶ（最初に 聞く。「自分」からも 開ける）。done(position)：選んだあと
+export function askPosition({ first = false, done = () => {} } = {}) {
+  const sheet = openSheet(first ? "ポジションを 選んでね" : "ポジションを変える", `
+    <p class="hint">${first ? "トレーナーが ポジションごとに メニューを配れるように、最初に 選んでね（あとから「自分」で 変えられます）" : "今のポジション：" + esc(state.me.position || "未設定")}</p>
+    <div class="position-picks">${state.positions.map((p) =>
+      `<button type="button" class="chip${p === state.me.position ? " on" : ""}" data-pick-position="${esc(p)}">${esc(p)}</button>`).join("")}</div>`);
+  sheet.querySelectorAll("[data-pick-position]").forEach((button) => button.addEventListener("click", () => run(button, async () => {
+    const { position } = await api("/me/position", { method: "PUT", body: { position: button.dataset.pickPosition } });
+    state.me.position = position;
+    closeSheet();
+    toast(`ポジションを「${position}」にしました`);
+    done(position);
+  })));
+}
 import { refreshInboxCount, renderAdmin } from "./admin.js";
 import { renderMember, renderMembers } from "./member.js";
 import { registerWorker } from "./notify.js";
@@ -153,6 +168,7 @@ async function boot() {
   }
   Object.assign(state, {
     me: data.user, team: data.team, parts: data.parts, kinds: data.kinds, reactions: data.reactions, limits: data.limits, vapidKey: data.vapid_key,
+    positions: data.positions ?? [],
   });
   $("#team-name").textContent = data.team.name;
   $("#top").hidden = false;
@@ -171,7 +187,8 @@ async function boot() {
     return go("post", postId);
   }
   const { workout } = await api("/workouts/active").catch(() => ({ workout: null }));
-  go(workout ? "workout" : "timeline"); // 筋トレの途中なら 記録の画面から
+  await go(workout ? "workout" : "timeline"); // 筋トレの途中なら 記録の画面から
+  if (state.me.role === "member" && state.positions.length && !state.me.position) askPosition({ first: true });
 }
 
 state.go = go;

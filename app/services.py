@@ -57,8 +57,18 @@ def team_users(session: Session, team_id: int) -> dict[int, User]:
 
 def user_brief(user: User | None) -> dict:
     if not user:
-        return {"id": 0, "name": "？", "role": "member"}
-    return {"id": user.id, "name": user.name, "role": user.role}
+        return {"id": 0, "name": "？", "role": "member", "position": ""}
+    return {"id": user.id, "name": user.name, "role": user.role, "position": user.position or ""}
+
+
+def positions_for(sport: str) -> list[str]:
+    """その競技の ポジション（ない競技は 空）。"""
+    return config.SPORT_POSITIONS.get(sport or "", [])
+
+
+def position_order(positions: list[str]):
+    """ポジションの順に 並べるための かぎ（決めていない人は 最後）。"""
+    return lambda user: (positions.index(user.position) if user.position in positions else len(positions), user.name)
 
 
 def get_team_post(session: Session, user: User, post_id: int) -> Post:

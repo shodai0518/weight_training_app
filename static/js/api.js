@@ -89,6 +89,19 @@ export const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden
 export const avatar = (user) =>
   `<span class="avatar${user.role === "trainer" ? " trainer" : ""}" aria-hidden="true">${esc([...String(user.name ?? "？")][0] ?? "？")}</span>`;
 
+// ポジションの印（例：OL）。決めていなければ 何も出さない
+export const positionTag = (user) => (user?.position ? `<span class="pos">${esc(user.position)}</span>` : "");
+
+// 人を ポジションごとに 分ける（チームのポジションの順。決めていない人は「未設定」、トレーナーは 最後に まとめる）
+export function groupByPosition(users) {
+  const groups = [];
+  const add = (label, members) => members.length && groups.push({ label, members });
+  for (const position of state.positions ?? []) add(position, users.filter((u) => u.role !== "trainer" && u.position === position));
+  add("未設定", users.filter((u) => u.role !== "trainer" && !(state.positions ?? []).includes(u.position)));
+  add("トレーナー", users.filter((u) => u.role === "trainer"));
+  return groups;
+}
+
 // メニューの期間（「10/12（月）〜10/18（日）」）と、今の期間かどうかの印
 export function menuPeriodHtml(menu) {
   const from = menu.start_day ? formatDay(menu.start_day) : "";
