@@ -310,6 +310,13 @@ select {
 .menu-banner .grow { display: flex; flex-direction: column; min-width: 0; }
 .menu-banner .hint { margin: 0; }
 .menu-banner-open { padding: 5px 12px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.fold-card > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.fold-card > summary::-webkit-details-marker { display: none; }
+.fold-card > summary strong { font-size: 16px; font-weight: 800; }
+.fold-card > summary .hint { margin: 0; }
+.fold-card > summary::after { content: "タップで開く ▼"; margin-left: auto; color: var(--gray); font-size: 11.5px; white-space: nowrap; }
+.fold-card[open] > summary::after { content: "タップで小さく ▲"; }
+.fold-card[open] > summary { margin-bottom: 6px; }
 .menu-box > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; }
 .menu-box > summary::-webkit-details-marker { display: none; }
 .menu-box > summary::after { content: "タップで開く ▼"; color: var(--gray); font-size: 11.5px; white-space: nowrap; }

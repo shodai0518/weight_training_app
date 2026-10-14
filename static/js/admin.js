@@ -7,6 +7,7 @@ import {
 import { bindPosts, parts, postBody, postHead } from "./timeline.js";
 
 let tab = "team"; // 「管理」を開いたときは チームの管理から
+let membersOpen = false; // チームの管理の「メンバー」の欄を 開いているか（最初は たたんでおく。開いたら そのまま）
 const TABS = { team: "チームの管理", inbox: "受信箱", menus: "メニュー" };
 
 export async function renderAdmin(view) {
@@ -408,7 +409,10 @@ async function renderTeam(body) {
         <button type="button" id="save-sport" class="small dark">変える</button></div>
       ${team.sport ? "" : '<p class="hint alert-text">まだ 競技が決まっていません。選んで「変える」を押してね</p>'}
     </div>
-    <div class="card"><strong>メンバー</strong>${users}</div>
+    <details class="card fold-card" id="members-fold"${membersOpen ? " open" : ""}>
+      <summary><strong>メンバー</strong><span class="hint">${team.users.filter((u) => u.active).length}人</span></summary>
+      ${users}
+    </details>
     <div class="card">
       <strong>チームで足した種目</strong>
       <p class="hint">名前を直したり、同じ種目を まとめたりできます（例：「ベンチ」を「ベンチプレス」に）。まとめると、今までの記録・グラフ・自己ベストが 1本になります。<strong>元には戻せません</strong></p>
@@ -423,6 +427,7 @@ async function renderTeam(body) {
     </div>`;
 
   const reload = () => renderTeam(body);
+  $("#members-fold", body).addEventListener("toggle", (event) => (membersOpen = event.currentTarget.open));
   $("#save-sport", body).addEventListener("click", (event) => run(event.currentTarget, async () => {
     await api("/admin/team", { method: "PATCH", body: { sport: $("#team-sport", body).value } });
     toast("競技を変えました。画面を 読み込み直すと 記録の画面に出ます");
