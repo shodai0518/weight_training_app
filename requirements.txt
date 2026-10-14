@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlmodel>=0.0.22
+psycopg[binary]>=3.2
+tzdata>=2024.1  # 時間帯のデータ（Windows には入っていないので 必要）
+pywebpush>=2.0  # プッシュ通知（休憩おわり・コメント）
+boto3>=1.35  # 写真の置き場（Cloudflare R2。S3互換）

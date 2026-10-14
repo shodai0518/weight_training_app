@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="筋トレ">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex">
+  <title>筋トレ</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header id="top" class="top" hidden>
+    <span id="team-name" class="team-name"></span>
+    <button type="button" id="bell" class="bell" aria-label="知らせ">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2.5h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+      <span id="bell-count" class="badge" hidden></span>
+    </button>
+  </header>
+
+  <main id="view"><p class="hint center">読み込み中…</p></main>
+
+  <div id="rest" class="rest-bar" hidden>
+    <div class="rest-main">
+      <span class="rest-label">休憩<small id="rest-name"></small></span>
+      <span id="rest-time" class="rest-time">0:00</span>
+    </div>
+    <div class="rest-buttons">
+      <button type="button" class="small" id="rest-minus">−15秒</button>
+      <button type="button" class="small" id="rest-plus">＋15秒</button>
+      <button type="button" class="small" id="rest-sound">音 オン</button>
+      <button type="button" class="small" id="rest-skip">スキップ</button>
+    </div>
+    <button type="button" class="small rest-notify" id="rest-notify" hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2.5h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+      画面を消していても 知らせる
+    </button>
+  </div>
+
+  <nav id="tabs" class="tabs" hidden>
+    <button type="button" data-tab="timeline">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 3.5 20.5 11v8.5a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg>
+      <span>タイムライン</span>
+    </button>
+    <button type="button" data-tab="workout">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6.5v11M17 6.5v11M3.5 9.5v5M20.5 9.5v5M7 12h10"/></svg>
+      <span>記録</span><span id="menu-badge" class="badge" hidden>新</span>
+    </button>
+    <button type="button" data-tab="members" data-trainer hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.6 3-5.5 6.5-5.5s6 1.9 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>
+      <span>メンバー</span>
+    </button>
+    <button type="button" data-tab="me">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.6-4 3.6-6.5 8-6.5s7.4 2.5 8 6.5"/></svg>
+      <span>自分</span>
+    </button>
+    <button type="button" data-tab="admin" data-trainer hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13 6.5 5h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13h4.5a3.5 3.5 0 0 0 7 0H20"/></svg>
+      <span>管理</span><span id="inbox-count" class="badge" hidden></span>
+    </button>
+  </nav>
+
+  <div id="sheet" class="sheet-layer" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><strong id="sheet-title"></strong><button type="button" id="sheet-close" class="small">閉じる</button></div>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+  <div id="who" class="who-layer" hidden>
+    <div class="who-card" role="dialog" aria-label="スタンプした人">
+      <div class="sheet-head"><strong>スタンプした人</strong><button type="button" id="who-close" class="small">閉じる</button></div>
+      <div id="who-body"></div>
+    </div>
+  </div>
+  <div id="viewer" class="viewer" hidden><img alt=""></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

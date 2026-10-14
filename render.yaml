@@ -1,0 +1,33 @@
+# Render に置くときの設定（無料プラン）。Render の「Blueprint」で このファイルを読みこむと、まとめて作られる
+services:
+  - type: web
+    name: kintore-team
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: APP_TIMEZONE
+        value: Asia/Tokyo
+      - key: SECRET_KEY
+        generateValue: true   # ログインの印に サインをする鍵（自動で作られる）
+      - key: DATABASE_URL
+        sync: false           # Neon の接続文字列を Render の画面で入れる
+      - key: OPERATOR_CODE
+        sync: false           # チームを作るための 運営用の合言葉
+      - key: S3_ENDPOINT_URL
+        sync: false           # Cloudflare R2 のアドレス
+      - key: S3_BUCKET
+        sync: false           # R2 のバケットの名前
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false           # 通知の鍵（scripts/make_vapid_keys.py で作る）
+      - key: VAPID_PRIVATE_KEY
+        sync: false
