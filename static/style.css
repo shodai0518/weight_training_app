@@ -394,8 +394,22 @@ details.record[open] > .record-summary::before { transform: rotate(90deg); }
 .position-filter { margin-top: 0; }
 .group-head { display: flex; align-items: baseline; gap: 8px; margin: 16px 4px 8px; font-family: var(--num); font-size: 20px; font-weight: 700; }
 .group-head span { font-family: var(--text); font-size: 12.5px; font-weight: 500; color: var(--gray); }
-.target-group { margin-top: 10px; }
-.target-group > .chip { margin-bottom: 6px; }
+.target-group { margin-top: 8px; border-radius: 14px; background: var(--fill); padding: 0 10px; }
+.target-group.picked { box-shadow: inset 0 0 0 1.5px var(--red); background: var(--red-pale); }
+.target-head { display: flex; align-items: center; gap: 10px; padding: 11px 2px; cursor: pointer; list-style: none; }
+.target-head::-webkit-details-marker { display: none; }
+.target-head strong { font-family: var(--num); font-size: 19px; }
+.target-count { margin-left: auto; color: var(--gray); font-size: 12.5px; font-weight: 700; }
+.target-group.picked .target-count { color: var(--red-dark); }
+.target-head::after { content: "▼"; font-size: 10px; color: var(--gray); }
+.target-group[open] .target-head::after { content: "▲"; }
+.target-group .target-list { margin: 0 0 10px; }
+.target-group .check { background: var(--white); }
+.group-fold { margin-bottom: 10px; }
+.group-fold > summary { cursor: pointer; list-style: none; margin: 4px 0 8px; padding: 10px 14px; background: var(--white); border-radius: 14px; box-shadow: var(--shadow); }
+.group-fold > summary::-webkit-details-marker { display: none; }
+.group-fold > summary::after { content: "▼"; margin-left: auto; font-size: 10px; color: var(--gray); font-family: var(--text); }
+.group-fold[open] > summary::after { content: "▲"; }
 .pos.big { font-size: 20px; line-height: 30px; padding: 0 12px; border-radius: 9px; }
 .position-card .row.between { align-items: flex-start; }
 .position-card button { margin-top: 6px; }

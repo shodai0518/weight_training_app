@@ -201,13 +201,13 @@ async function renderMenus(body) {
           <button type="button" data-target-mode="pick" class="${draftTargets ? "on" : ""}">人を選ぶ</button>
         </div>
         <div id="target-list"${draftTargets ? "" : " hidden"}>
-          <p class="hint">ポジションの名前を押すと、そのポジションの人を まとめて 選べます</p>
-          ${groupByPosition(people).map((g) => `<div class="target-group">
-            <button type="button" class="chip" data-pick-group="${esc(g.label)}">${esc(g.label)}（${g.members.length}人）</button>
+          <p class="hint">ポジションを押すと、そのポジションの全員を 選んで 開きます（はずしたい人は チェックを外す。もう一度押すと まとめて外れます）</p>
+          ${groupByPosition(people).map((g) => `<details class="target-group" data-group="${esc(g.label)}"${g.members.some((u) => draftTargets?.includes(u.id)) ? " open" : ""}>
+            <summary class="target-head"><strong>${esc(g.label)}</strong><span class="target-count"></span></summary>
             <div class="target-list">${g.members.map((u) => `
               <label class="check"><input type="checkbox" value="${u.id}" data-group="${esc(g.label)}"${draftTargets?.includes(u.id) ? " checked" : ""}>
                 ${avatar(u)}<span>${esc(u.name)}</span>${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}</label>`).join("")}</div>
-          </div>`).join("") || '<p class="hint">まだ メンバーが いません</p>'}
+          </details>`).join("") || '<p class="hint">まだ メンバーが いません</p>'}
         </div>
       </div>
       <div id="menu-thumbs" class="thumbs"></div>
@@ -285,15 +285,19 @@ async function renderMenus(body) {
     $("#target-list", body).hidden = !pick;
   }));
   $("#target-list", body).addEventListener("change", () => (draftTargets = readTargets()));
-  // ポジションの名前を押すと、そのポジションの人を まとめて 選ぶ（みんな選ばれていたら まとめて外す）
-  const markGroups = () => body.querySelectorAll("[data-pick-group]").forEach((chip) => {
-    const boxes = [...body.querySelectorAll(`#target-list input[data-group="${CSS.escape(chip.dataset.pickGroup)}"]`)];
-    chip.classList.toggle("on", boxes.length > 0 && boxes.every((b) => b.checked));
+  // ポジションごとに たたんでおく。押すと そのポジションの全員を 選んで 開く。開いているときに押すと、まとめて外して たたむ
+  const markGroups = () => body.querySelectorAll(".target-group").forEach((group) => {
+    const boxes = [...group.querySelectorAll("input[type=checkbox]")];
+    const picked = boxes.filter((b) => b.checked).length;
+    group.querySelector(".target-count").textContent = picked ? `${picked} / ${boxes.length}人 選んでいます` : `${boxes.length}人`;
+    group.classList.toggle("picked", picked > 0);
   });
-  body.querySelectorAll("[data-pick-group]").forEach((chip) => chip.addEventListener("click", () => {
-    const boxes = [...body.querySelectorAll(`#target-list input[data-group="${CSS.escape(chip.dataset.pickGroup)}"]`)];
-    const all = boxes.every((b) => b.checked);
-    boxes.forEach((b) => (b.checked = !all));
+  body.querySelectorAll(".target-group > summary").forEach((summary) => summary.addEventListener("click", (event) => {
+    event.preventDefault(); // 開け閉めは ここで決める
+    const group = summary.parentElement;
+    const open = !group.open;
+    group.querySelectorAll("input[type=checkbox]").forEach((b) => (b.checked = open));
+    group.open = open;
     draftTargets = readTargets();
     markGroups();
   }));

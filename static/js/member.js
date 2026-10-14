@@ -7,6 +7,7 @@ import { summaryHtml } from "./timeline.js";
 import { renderCompose } from "./workout.js";
 
 let memberFilter = "all"; // メンバーの一覧で しぼっている ポジション
+const memberGroupsOpen = new Set(); // メンバーの一覧で 開いている ポジション（最初は ぜんぶ たたんでおく）
 
 export async function renderMembers(view) {
   const members = await api("/members");
@@ -28,8 +29,16 @@ export async function renderMembers(view) {
       <button type="button" class="chip${memberFilter === "all" ? " on" : ""}" data-filter-position="all">全員 ${members.length}</button>
       ${groups.map((g) => `<button type="button" class="chip${memberFilter === g.label ? " on" : ""}" data-filter-position="${esc(g.label)}">${esc(g.label)} ${g.members.length}</button>`).join("")}
     </div>` : ""}
-    ${shown.map((g) => `<p class="group-head">${esc(g.label)}<span>${g.members.length}人</span></p>
-      <div class="card list">${g.members.map(row).join("")}</div>`).join("")}`;
+    ${shown.map((g) => `<details class="group-fold" data-group="${esc(g.label)}"${memberGroupsOpen.has(g.label) || memberFilter === g.label ? " open" : ""}>
+      <summary class="group-head">${esc(g.label)}<span>${g.members.length}人</span></summary>
+      <div class="card list">${g.members.map(row).join("")}</div>
+    </details>`).join("")}`;
+  // 開いた ポジションを 覚えておく（見出しを 押したときだけ）
+  view.querySelectorAll(".group-fold > summary").forEach((summary) => summary.addEventListener("click", () => {
+    const label = summary.parentElement.dataset.group;
+    if (summary.parentElement.open) memberGroupsOpen.delete(label);
+    else memberGroupsOpen.add(label);
+  }));
   view.querySelectorAll("[data-filter-position]").forEach((chip) => chip.addEventListener("click", () => {
     memberFilter = chip.dataset.filterPosition;
     renderMembers(view);
