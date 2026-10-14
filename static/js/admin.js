@@ -49,19 +49,15 @@ async function renderInbox(body, { openFirst = false } = {}) {
 
 function reviewHtml(post, replies) {
   const quick = replies.map((r) => `<button type="button" class="chip" data-quick="${esc(r.body)}">${esc(r.body)}</button>`).join("");
-  // スタンプは 下の欄に いつも出しておく（1回押すだけで 付けられる。もう一度押すと 外れる）
-  const mine = post.reactions.find((r) => r.mine)?.emoji;
-  const stamps = state.reactions.map((emoji) => `<button type="button" class="pick${emoji === mine ? " mine" : ""}" data-act="react"
-    data-kind="posts" data-id="${post.id}" data-emoji="${emoji}" data-mine="${emoji === mine ? 1 : 0}" aria-label="スタンプ ${emoji}">${emoji}</button>`).join("");
+
   return `<article class="post detail review" data-post="${post.id}">
     ${postHead(post)}
     ${postBody(post, { trend: true, open: true })}
-    ${post.last_trainer_comment ? `<p class="last-comment">前回のコメント：「${esc(post.last_trainer_comment)}」</p>` : ""}
     ${parts.reactionsHtml(post.reactions, "posts", post.id)}
     <strong class="comments-title">コメント ${post.comment_count}件</strong>
     <div class="comments">${parts.commentsHtml(post.comments) || '<p class="hint">まだコメントは ありません</p>'}</div>
     <div class="review-bar">
-      <div class="review-stamps">${stamps}</div>
+      ${parts.stampBarHtml(post)}
       <div class="chips">${quick}</div>
       ${parts.replyingHtml}
       <textarea class="reply" rows="2" maxlength="${state.limits.comment}" placeholder="コメントを書く…"></textarea>

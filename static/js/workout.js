@@ -14,6 +14,8 @@ const BACKFILL_DAYS = 7; // 何日前の分まで あとから記録できるか
 let catalog = null; // 種目の一覧（前回の記録・休憩の長さ付き）
 let menuList = []; // 配られているメニュー（筋トレ中の画面に出す）
 let menuOpen = false; // 筋トレ中の画面で、メニューを開いているか（最初は閉じておく。開いたら そのままにしておく）
+// 「今日の記録」の 種目ごとの たたみ具合（種目 → 開いているか）。決めていない種目は、今 選んでいる種目だけ 開く
+const recordOpen = new Map();
 let selectedPart = "chest";
 let selectedExercise = null;
 let clockTimer = null;
@@ -162,12 +164,14 @@ function menuHtml(workout) {
 
 // ---- 記録の一覧（筋トレ中と、投稿する前の画面で使う）：セットを直す・消す、種目ごとのメモ ----
 
-export function recordListHtml(workout) {
+// isOpen(種目)：その種目を 開いて出すか（たたむと 名前・セット数・いちばん強いセット だけ）
+export function recordListHtml(workout, isOpen = () => true) {
   if (!workout.exercises.length) return '<p class="hint">まだありません</p>';
   return workout.exercises.map((e) => `
-    <div class="set-group record" data-ex="${e.exercise_id}" data-kind="${e.kind}">
-      <div class="record-head"><strong>${esc(e.name)}</strong>
-        <button type="button" class="link" data-note-open>${icon("note")}${e.note ? "メモを直す" : "メモ"}</button></div>
+    <details class="set-group record" data-ex="${e.exercise_id}" data-kind="${e.kind}"${isOpen(e) ? " open" : ""}>
+      <summary class="record-summary"><strong>${esc(e.name)}</strong>
+        <span class="record-count">${e.count}セット・${esc(e.best)}${e.has_pr ? " ★" : ""}${e.note ? `・${icon("note")}` : ""}</span></summary>
+      <div class="record-head"><button type="button" class="link" data-note-open>${icon("note")}${e.note ? "メモを直す" : "メモを付ける"}</button></div>
       <ol>${e.sets.map((s) => `<li data-set="${s.id}"><span class="set-text">${esc(s.label)}${s.is_pr ? ' <span class="pr">★自己ベスト</span>' : ""}</span>
         <span class="set-actions"><button type="button" class="link" data-edit>直す</button><button type="button" class="link" data-del>消す</button></span></li>`).join("")}</ol>
       ${e.note ? `<p class="ex-note">${esc(e.note)}</p>` : ""}
@@ -175,7 +179,7 @@ export function recordListHtml(workout) {
         <input maxlength="200" value="${esc(e.note)}" placeholder="この種目のメモ（例：右肩が少し痛い）">
         <button type="button" class="small dark" data-note-save>保存</button>
       </div>
-    </div>`).join("");
+    </details>`).join("");
 }
 
 // changed(workout)：直したあとの 新しい筋トレで 描き直す
@@ -284,7 +288,7 @@ function renderActive(view, workout) {
     ${menuHtml(workout)}
     <div class="card">
       <strong>${workout.backfill ? "この日の記録" : "今日の記録"}</strong>
-      <div id="record">${recordListHtml(workout)}</div>
+      <div id="record">${recordListHtml(workout, (e) => recordOpen.get(e.exercise_id) ?? e.exercise_id === selectedExercise)}</div>
     </div>
     <button type="button" id="finish" class="dark wide">${workout.backfill ? "記録を終わる" : "筋トレを終わる"}</button>
     <button type="button" id="cancel" class="link center-block">この筋トレを取り消す</button>`;
@@ -340,6 +344,12 @@ function renderActive(view, workout) {
   }));
 
   bindRecordList($("#record", view), () => workout, (fresh) => renderActive(view, fresh));
+  // 種目を たたんだか 開いたかを 覚えておく（セットを追加して 描き直しても そのまま）。
+  // 「開いた」の合図（toggle）は 開いたまま描いただけでも出るので、見出しを 押したときだけ 覚える
+  $("#record", view).addEventListener("click", (event) => {
+    const summary = event.target.closest(".record-summary");
+    if (summary) recordOpen.set(Number(summary.parentElement.dataset.ex), !summary.parentElement.open);
+  });
 
   const leave = () => {
     clearInterval(clockTimer);
@@ -347,6 +357,7 @@ function renderActive(view, workout) {
     renderActive.lastInput = null;
     selectedExercise = null;
     menuOpen = false;
+    recordOpen.clear();
   };
   $("#finish", view).addEventListener("click", (event) => run(event.currentTarget, async () => {
     const data = await api(`/workouts/${workout.id}/finish`, { method: "POST" });

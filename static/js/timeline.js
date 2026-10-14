@@ -109,13 +109,21 @@ function postDetail(post) {
     ${reactionsHtml(post.reactions, "posts", post.id)}
     <strong class="comments-title">コメント ${post.comment_count}件</strong>
     <div class="comments">${commentsHtml(post.comments) || '<p class="hint">まだコメントは ありません</p>'}</div>
-    <form class="comment-form bar">${replyingHtml}<input name="body" maxlength="${state.limits.comment}" placeholder="コメントを書く…" autocomplete="off">
+    <form class="comment-form bar">${stampBarHtml(post)}${replyingHtml}<input name="body" maxlength="${state.limits.comment}" placeholder="コメントを書く…" autocomplete="off">
       <button type="submit" class="primary small">送る</button></form>
   </article>`;
 }
 
 // 受信箱のカードでも使う部品
-export const parts = { reactionsHtml, commentsHtml, replyingHtml };
+// コメントを書く欄の すぐ上に いつも出す スタンプの列（スクロールしても 動かない。1回押すだけで 付く／外れる）
+function stampBarHtml(post) {
+  const mine = post.reactions.find((r) => r.mine)?.emoji;
+  return `<div class="review-stamps">${state.reactions.map((emoji) => `<button type="button" class="pick${emoji === mine ? " mine" : ""}"
+    data-act="react" data-kind="posts" data-id="${post.id}" data-emoji="${emoji}" data-mine="${emoji === mine ? 1 : 0}"
+    aria-label="スタンプ ${emoji}">${emoji}</button>`).join("")}</div>`;
+}
+
+export const parts = { reactionsHtml, commentsHtml, replyingHtml, stampBarHtml };
 
 // くわしい画面を 下から出す。changed(post)：中で変わったとき。removed()：投稿を消したとき
 function openDetail(postId, { changed, removed }) {
