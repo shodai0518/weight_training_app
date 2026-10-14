@@ -382,6 +382,9 @@ p.ex-note { margin: 4px 0 2px; padding: 6px 10px; background: var(--fill); borde
 .group-head span { font-family: var(--text); font-size: 12.5px; font-weight: 500; color: var(--gray); }
 .target-group { margin-top: 10px; }
 .target-group > .chip { margin-bottom: 6px; }
+.pos.big { font-size: 20px; line-height: 30px; padding: 0 12px; border-radius: 9px; }
+.position-card .row.between { align-items: flex-start; }
+.position-card button { margin-top: 6px; }
 .position-select { width: auto; padding: 6px 30px 6px 10px; font-size: 13.5px; background-position: right 8px center; }
 
 /* ---- 受信箱（一覧）と、開いたときの画面 ---- */

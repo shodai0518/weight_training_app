@@ -126,11 +126,29 @@ async function settingsHtml() {
     </div>
     <div class="card">
       <strong>アカウント</strong>
-      ${state.positions.length && state.me.role === "member" ? `<p class="hint">ポジション：<strong>${esc(state.me.position || "未設定")}</strong>
-        <button type="button" id="change-position" class="link">変える</button></p>` : ""}
       <p class="hint">ログインID：${esc(state.me.login_id)}</p>
       <button type="button" id="logout" class="small">ログアウト</button>
     </div>`;
+}
+
+// ポジション：本人は「変える」ボタン、トレーナーは ほかの選手のページで その場で変えられる
+function positionCardHtml(user, mine, trainer) {
+  if (!state.positions.length || user.role !== "member") return "";
+  const current = mine ? state.me.position : user.position;
+  if (mine) {
+    return `<div class="card position-card">
+      <div class="row between"><div><strong>ポジション</strong><p class="hint">変わったら ここから 変えられます</p></div>
+        <span class="pos big">${esc(current || "未設定")}</span></div>
+      <button type="button" id="change-position" class="small dark">ポジションを変える</button>
+    </div>`;
+  }
+  if (!trainer) return "";
+  return `<div class="card position-card">
+    <div class="row between"><div><strong>ポジション</strong><p class="hint">トレーナーが 変えられます</p></div>
+      <select id="member-position" class="position-select" aria-label="ポジション">
+        <option value="">未設定</option>${state.positions.map((p) => `<option${p === current ? " selected" : ""}>${esc(p)}</option>`).join("")}
+      </select></div>
+  </div>`;
 }
 
 export async function renderMember(view, memberId) {
@@ -154,6 +172,7 @@ export async function renderMember(view, memberId) {
         ${data.user.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
         ${data.user.active ? "" : '<span class="hint">（やめた人）</span>'}</div>
     </div>
+    ${positionCardHtml(data.user, mine, trainer)}
     <div class="card">
       <strong>種目ごとの伸び</strong>
       ${data.series.length ? `<select id="series">${data.series.map((s) =>
@@ -204,6 +223,14 @@ export async function renderMember(view, memberId) {
     selected = Number(event.target.value);
     drawChart();
   });
+  $("#member-position", view)?.addEventListener("change", (event) => {
+    const select = event.currentTarget; // 待っている間に event.currentTarget は 空になるので、先に とっておく
+    run(select, async () => {
+      await api(`/admin/members/${memberId}`, { method: "PATCH", body: { position: select.value } });
+      toast(`${data.user.name} さんの ポジションを「${select.value || "未設定"}」にしました`);
+    });
+  });
+  $("#change-position", view)?.addEventListener("click", () => askPosition({ done: () => state.go("me") }));
   $(".back", view)?.addEventListener("click", () => state.go(trainer ? "members" : "timeline"));
   view.querySelectorAll("[data-post]").forEach((button) =>
     button.addEventListener("click", () => state.go("post", Number(button.dataset.post))));
@@ -229,7 +256,6 @@ export async function renderMember(view, memberId) {
       await api("/push/test", { method: "POST" });
       toast("送りました。数秒で 届きます");
     }));
-    $("#change-position", view)?.addEventListener("click", () => askPosition({ done: () => state.go("me") }));
     $("#logout", view).addEventListener("click", (event) => run(event.currentTarget, async () => {
       await notify.disablePush().catch(() => {}); // このスマホに ほかの人の知らせが 届かないように
       await api("/logout", { method: "POST" });
