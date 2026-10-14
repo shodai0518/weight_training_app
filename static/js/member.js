@@ -6,6 +6,15 @@ import * as notify from "./notify.js";
 import { summaryHtml } from "./timeline.js";
 import { renderCompose } from "./workout.js";
 
+// メンバーの一覧に出す いちばん新しい 体重・体脂肪率（入れた日も）
+function bodyLine(body) {
+  if (!body) return '<span class="hint body-line">体重：まだ記録なし</span>';
+  const parts = [];
+  if (body.weight != null) parts.push(`体重 <strong>${body.weight}kg</strong>（${formatDay(body.weight_day)}）`);
+  if (body.body_fat != null) parts.push(`体脂肪率 <strong>${body.body_fat}%</strong>（${formatDay(body.body_fat_day)}）`);
+  return `<span class="hint body-line">${parts.join("　")}</span>`;
+}
+
 let memberFilter = "all"; // メンバーの一覧で しぼっている ポジション
 const memberGroupsOpen = new Set(); // メンバーの一覧で 開いている ポジション（最初は ぜんぶ たたんでおく）
 
@@ -21,6 +30,7 @@ export async function renderMembers(view) {
       <span class="list-main">${avatar(m)}<strong>${esc(m.name)}</strong>${positionTag(m)}${m.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
         ${m.recent_pr ? '<span class="pr">★自己ベスト</span>' : ""}${idle}</span>
       <span class="hint">${last}・この7日 ${m.week_count}回</span>
+      ${bodyLine(m.body)}
     </button>`;
   };
   const shown = groups.filter((g) => memberFilter === "all" || g.label === memberFilter);

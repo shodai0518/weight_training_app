@@ -337,3 +337,25 @@ def test_no_positions_for_sports_without_list():
     player = join(coach, "たなか", "tanaka")
     assert player.get("/api/me").json()["positions"] == []
     assert player.put("/api/me/position", json={"position": "QB"}).status_code == 400
+
+
+def test_member_list_shows_latest_body():
+    from datetime import date, timedelta
+
+    from app.models import BodyLog
+
+    coach = create_team()
+    player = join(coach, "たなか", "tanaka")
+    join(coach, "すずき", "suzuki")
+    uid = me(player)["id"]
+    with Session(db.engine) as session:  # 体重は 3日前、体脂肪率は きのう に入れた
+        session.add(BodyLog(user_id=uid, day=date.today() - timedelta(days=3), weight=70.0, body_fat=16.0))
+        session.add(BodyLog(user_id=uid, day=date.today() - timedelta(days=1), body_fat=15.5))
+        session.commit()
+    rows = {m["name"]: m for m in coach.get("/api/members").json()}
+    body = rows["たなか"]["body"]
+    assert (body["weight"], body["body_fat"]) == (70.0, 15.5)
+    assert body["weight_day"] == (date.today() - timedelta(days=3)).isoformat()
+    assert body["body_fat_day"] == (date.today() - timedelta(days=1)).isoformat()
+    assert rows["すずき"]["body"] is None
+    assert player.get("/api/members").status_code == 403  # 一覧は トレーナーだけ

@@ -466,6 +466,7 @@ details.record[open] > .record-summary::before { transform: rotate(90deg); }
 .list-row:last-child { border-bottom: 0; }
 .list-row .list-main { display: flex; align-items: center; flex-wrap: wrap; }
 .list-row .hint { margin: 2px 0 0; }
+.body-line strong { color: var(--black); font-family: var(--num); font-size: 15px; }
 .list-row.unread { box-shadow: inset 4px 0 0 var(--red); font-weight: 700; }
 .history-item { border-top: 1px solid var(--line); padding: 12px 0 4px; }
 .history-item:first-of-type { border-top: 0; }

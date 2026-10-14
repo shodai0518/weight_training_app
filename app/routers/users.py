@@ -12,7 +12,7 @@ from sqlmodel import Session, func, select
 
 from app import auth, clock, config, push, rules, services
 from app.db import get_session
-from app.models import Notice, Post, PushSub, Reaction, Team, User, Workout, WorkoutSet
+from app.models import BodyLog, Notice, Post, PushSub, Reaction, Team, User, Workout, WorkoutSet
 from app.routers.body import body_logs
 
 router = APIRouter(prefix="/api")
@@ -221,7 +221,22 @@ def members(user: User = Depends(auth.require_trainer), session: Session = Depen
     by_position = services.position_order(positions)
     users = [u for u in services.team_users(session, user.team_id).values() if u.active]
     users.sort(key=lambda u: (u.role != "member", by_position(u)))
-    return [member_row(u, stats) for u in users]
+    body = latest_body(session, [u.id for u in users])
+    return [{**member_row(u, stats), "body": body.get(u.id)} for u in users]
+
+
+def latest_body(session: Session, user_ids: list[int]) -> dict[int, dict]:
+    """人ごとの いちばん新しい 体重と 体脂肪率（入れた日が ちがうこともあるので、べつべつに）。"""
+    latest: dict[int, dict] = {}
+    if not user_ids:
+        return latest
+    for log in session.exec(select(BodyLog).where(BodyLog.user_id.in_(user_ids)).order_by(BodyLog.day)).all():
+        entry = latest.setdefault(log.user_id, {"weight": None, "weight_day": None, "body_fat": None, "body_fat_day": None})
+        if log.weight is not None:
+            entry["weight"], entry["weight_day"] = log.weight, log.day.isoformat()
+        if log.body_fat is not None:
+            entry["body_fat"], entry["body_fat_day"] = log.body_fat, log.day.isoformat()
+    return latest
 
 
 @router.get("/members/{member_id}")
