@@ -8,6 +8,8 @@ import { bindPosts, parts, postBody, postHead } from "./timeline.js";
 
 let tab = "team"; // 「管理」を開いたときは チームの管理から
 let membersOpen = false; // チームの管理の「メンバー」の欄を 開いているか（最初は たたんでおく。開いたら そのまま）
+const openPositions = new Set(); // 「メンバー」の中で 開いている ポジション
+const openMembers = new Set(); // 操作のボタンを 開いている人
 const TABS = { team: "チームの管理", inbox: "受信箱", menus: "メニュー" };
 
 export async function renderAdmin(view) {
@@ -379,12 +381,16 @@ async function renderTeam(body) {
         <button type="button" class="small" data-merge>まとめる</button>
       </div>
     </div>`).join("");
-  const users = team.users.map((u) => `
-    <div class="member-row${u.active ? "" : " off"}" data-user="${u.id}">
-      <div><strong>${esc(u.name)}</strong>${positionTag(u)} <span class="hint">${esc(u.login_id)}</span>
-        ${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}${u.active ? "" : '<span class="hint">（使えなくした）</span>'}
-        <div class="hint">${u.last_day ? `最後：${formatDay(u.last_day)}・この7日 ${u.week_count}回` : "まだ記録なし"}</div></div>
-      ${u.me ? '<span class="hint">自分</span>' : `<div class="row wrap">
+  // 1人ずつ：押すと 操作のボタン（トレーナーにする・ポジション・使えなくする・仮のパスワード）が 出てくる
+  const userRow = (u) => `
+    <details class="member-row${u.active ? "" : " off"}" data-user="${u.id}"${openMembers.has(u.id) && !u.me ? " open" : ""}>
+      <summary class="member-summary">${avatar(u)}
+        <div class="grow"><strong>${esc(u.name)}</strong>${positionTag(u)}
+          ${u.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}${u.active ? "" : '<span class="hint">（使えなくした）</span>'}
+          <div class="hint">${esc(u.login_id)}・${u.last_day ? `最後：${formatDay(u.last_day)}・この7日 ${u.week_count}回` : "まだ記録なし"}</div></div>
+        ${u.me ? '<span class="hint">自分</span>' : '<span class="member-more">操作</span>'}
+      </summary>
+      ${u.me ? "" : `<div class="member-actions row wrap">
         ${u.active ? `<button type="button" class="small" data-role="${u.role === "trainer" ? "member" : "trainer"}">
           ${u.role === "trainer" ? "選手にする" : "トレーナーにする"}</button>` : ""}
         ${team.positions.length && u.role === "member" && u.active ? `<select class="position-select" data-position aria-label="ポジション">
@@ -393,7 +399,15 @@ async function renderTeam(body) {
         <button type="button" class="small" data-active="${u.active ? 0 : 1}">${u.active ? "使えなくする" : "使えるようにする"}</button>
         ${u.active ? '<button type="button" class="small" data-reset>仮のパスワード</button>' : ""}
       </div>`}
-    </div>`).join("");
+    </details>`;
+  // ポジションごとに 並べて、ポジションごとに たたむ（使えなくした人は 最後に まとめる）
+  const inactive = team.users.filter((u) => !u.active);
+  const memberGroups = [...groupByPosition(team.users.filter((u) => u.active)), ...(inactive.length ? [{ label: "使えなくした人", members: inactive }] : [])];
+  const users = memberGroups.map((g) => `
+    <details class="pos-fold" data-group="${esc(g.label)}"${openPositions.has(g.label) ? " open" : ""}>
+      <summary class="pos-fold-head"><strong>${esc(g.label)}</strong><span class="hint">${g.members.length}人</span></summary>
+      ${g.members.map(userRow).join("")}
+    </details>`).join("");
 
   body.innerHTML = `
     <div class="card">
@@ -433,6 +447,15 @@ async function renderTeam(body) {
 
   const reload = () => renderTeam(body);
   $("#members-fold", body).addEventListener("toggle", (event) => (membersOpen = event.currentTarget.open));
+  // 開いた ポジション・人を 覚えておく（操作のあと 描き直しても そのまま）。見出しを 押したときだけ 覚える
+  $("#members-fold", body).addEventListener("click", (event) => {
+    const summary = event.target.closest("summary");
+    if (!summary || summary.parentElement.id === "members-fold") return;
+    const fold = summary.parentElement;
+    const [set, key] = fold.dataset.group !== undefined ? [openPositions, fold.dataset.group] : [openMembers, Number(fold.dataset.user)];
+    if (fold.open) set.delete(key);
+    else set.add(key);
+  });
   $("#save-sport", body).addEventListener("click", (event) => run(event.currentTarget, async () => {
     await api("/admin/team", { method: "PATCH", body: { sport: $("#team-sport", body).value } });
     toast("競技を変えました。画面を 読み込み直すと 記録の画面に出ます");

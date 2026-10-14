@@ -483,6 +483,20 @@ details.record[open] > .record-summary::before { transform: rotate(90deg); }
 .last-comment { background: var(--red-pale); box-shadow: inset 3px 0 0 var(--red); border-radius: 12px; padding: 8px 12px; color: var(--black); font-size: 13.5px; margin: 10px 0; }
 .invite { font-family: var(--num); font-size: 40px; font-weight: 700; letter-spacing: 6px; line-height: 1.1; margin: 4px 0; }
 .member-row { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding: 12px 0; }
+.pos-fold { margin-top: 8px; border-radius: 14px; background: var(--fill); padding: 0 12px; }
+.pos-fold-head { display: flex; align-items: center; gap: 10px; padding: 11px 2px; cursor: pointer; list-style: none; }
+.pos-fold-head::-webkit-details-marker { display: none; }
+.pos-fold-head strong { font-family: var(--num); font-size: 19px; }
+.pos-fold-head::after { content: "▼"; margin-left: auto; font-size: 10px; color: var(--gray); }
+.pos-fold[open] > .pos-fold-head::after { content: "▲"; }
+.pos-fold[open] { padding-bottom: 8px; }
+details.member-row { display: block; padding: 0; margin-bottom: 6px; border-top: 0; background: var(--white); border-radius: 12px; }
+.member-summary { display: flex; align-items: center; gap: 4px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.member-summary::-webkit-details-marker { display: none; }
+.member-summary .hint { margin: 2px 0 0; }
+.member-more { flex: none; padding: 4px 10px; border-radius: 999px; background: var(--fill); font-size: 12px; font-weight: 700; }
+details.member-row[open] .member-more { background: var(--black); color: var(--white); }
+.member-actions { padding: 0 12px 12px; gap: 6px; }
 .member-row.off { opacity: 0.5; }
 
 /* ---- 重ねて出すもの ---- */
