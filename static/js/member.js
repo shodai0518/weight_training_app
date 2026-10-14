@@ -172,7 +172,6 @@ export async function renderMember(view, memberId) {
         ${data.user.role === "trainer" ? '<span class="role">トレーナー</span>' : ""}
         ${data.user.active ? "" : '<span class="hint">（やめた人）</span>'}</div>
     </div>
-    ${positionCardHtml(data.user, mine, trainer)}
     <div class="card">
       <strong>種目ごとの伸び</strong>
       ${data.series.length ? `<select id="series">${data.series.map((s) =>
@@ -184,7 +183,8 @@ export async function renderMember(view, memberId) {
       <strong>筋トレの履歴</strong>
       ${history || '<p class="hint">まだ記録がありません</p>'}
     </div>
-    <div id="settings"></div>`;
+    <div id="settings"></div>
+    ${positionCardHtml(data.user, mine, trainer)}`; // ポジションは めったに変えないので 一番下
 
   const drawChart = () => {
     const series = data.series.find((s) => s.exercise_id === selected);
