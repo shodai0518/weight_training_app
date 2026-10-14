@@ -421,6 +421,14 @@ async function renderTeam(body) {
       <p>選手 <strong>${team.members.count}</strong> / ${team.members.max}人　トレーナー <strong>${team.trainers.count}</strong> / ${team.trainers.max}人</p>
     </div>
     <div class="card">
+      <strong>体重・体脂肪率を書き出す</strong>
+      <p class="hint">選手全員の記録を、ポジションごとに 1つのファイル（CSV）にまとめます。Google スプレッドシートや Excel で 開けます</p>
+      <div class="row">
+        <select id="export-days" class="grow"><option value="7">この1週間</option><option value="30">この1か月</option><option value="0">全部</option></select>
+        <a id="export-body" class="button small dark" href="/api/admin/export/body.csv?days=7" download>書き出す</a>
+      </div>
+    </div>
+    <div class="card">
       <strong>競技</strong>
       <p class="hint">記録の画面の 最後のボタンに、競技向けの種目が出ます</p>
       <div class="row"><select id="team-sport" class="grow">${Object.entries(team.sports).map(([key, label]) =>
@@ -446,6 +454,7 @@ async function renderTeam(body) {
     </div>`;
 
   const reload = () => renderTeam(body);
+  $("#export-days", body).addEventListener("change", (event) => ($("#export-body", body).href = `/api/admin/export/body.csv?days=${event.target.value}`));
   $("#members-fold", body).addEventListener("toggle", (event) => (membersOpen = event.currentTarget.open));
   // 開いた ポジション・人を 覚えておく（操作のあと 描き直しても そのまま）。見出しを 押したときだけ 覚える
   $("#members-fold", body).addEventListener("click", (event) => {

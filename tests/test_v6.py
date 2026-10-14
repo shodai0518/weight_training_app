@@ -359,3 +359,41 @@ def test_member_list_shows_latest_body():
     assert body["body_fat_day"] == (date.today() - timedelta(days=1)).isoformat()
     assert rows["すずき"]["body"] is None
     assert player.get("/api/members").status_code == 403  # 一覧は トレーナーだけ
+
+
+def test_export_body_csv_grouped_by_position():
+    import csv
+    import io
+    from datetime import date, timedelta
+
+    from app.models import BodyLog
+
+    coach = create_team()
+    players = {name: join(coach, name, login) for name, login in (("たなか", "tanaka"), ("すずき", "suzuki"), ("さとう", "sato"), ("いとう", "ito"))}
+    players["たなか"].put("/api/me/position", json={"position": "RB"})
+    players["すずき"].put("/api/me/position", json={"position": "QB"})
+    players["さとう"].put("/api/me/position", json={"position": "RB"})
+    ids = {name: me(c)["id"] for name, c in players.items()}
+    today = date.today()
+    with Session(db.engine) as session:
+        session.add(BodyLog(user_id=ids["たなか"], day=today - timedelta(days=2), weight=80.0, body_fat=15.5))
+        session.add(BodyLog(user_id=ids["たなか"], day=today, weight=79.5))
+        session.add(BodyLog(user_id=ids["すずき"], day=today - timedelta(days=20), weight=70.0))  # 1週間より前
+        session.commit()
+    res = coach.get("/api/admin/export/body.csv")
+    assert res.status_code == 200 and res.headers["content-type"].startswith("text/csv")
+    assert "attachment" in res.headers["content-disposition"]
+    text = res.content.decode("utf-8")
+    assert text.startswith("﻿")  # Excel で 文字化けしないように
+    rows = list(csv.reader(io.StringIO(text.lstrip("﻿"))))
+    day = lambda d: d.strftime("%Y/%m/%d")  # noqa: E731
+    assert rows == [
+        ["選手名", "記録した日付", "体重(kg)", "体脂肪率(%)"],
+        ["QB"], ["すずき", "", "", ""],  # この1週間は 記録なし（名前だけ）
+        ["RB"], ["さとう", "", "", ""], ["たなか", day(today - timedelta(days=2)), "80", "15.5"], ["たなか", day(today), "79.5", ""],
+        ["未設定"], ["いとう", "", "", ""],
+    ]
+    everything = list(csv.reader(io.StringIO(coach.get("/api/admin/export/body.csv?days=0").content.decode("utf-8-sig"))))
+    assert ["すずき", day(today - timedelta(days=20)), "70", ""] in everything
+    assert coach.get("/api/admin/export/body.csv?days=5").status_code == 400
+    assert players["たなか"].get("/api/admin/export/body.csv").status_code == 403  # トレーナーだけ

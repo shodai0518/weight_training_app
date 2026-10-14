@@ -263,3 +263,55 @@ def merge_exercise(exercise_id: int, body: ExerciseMerge, user: User = Depends(a
     services.recompute_prs(session, user_ids, target)  # 記録が 1本になったので、自己ベストの印を 付け直す
     session.commit()
     return {"ok": True, "moved_sets": len(sets)}
+
+
+# ---- 体重・体脂肪率を 書き出す（スプレッドシートに 書き写す用）----
+
+EXPORT_PERIODS = {7: "この1週間", 30: "この1か月", 0: "全部"}
+
+
+@router.get("/export/body.csv")
+def export_body(days: int = 7, user: User = Depends(auth.require_trainer), session: Session = Depends(get_session)):
+    """体重・体脂肪率の CSV。ポジションごとに「RB」のような 1行を入れて、その下に 選手ごとの記録を並べる。
+
+    1行目：選手名, 記録した日付, 体重(kg), 体脂肪率(%)。その期間に 記録がない選手も 名前だけ 1行 出す（入れ忘れが わかるように）。
+    Excel で 文字化けしないように、先頭に BOM を付ける。
+    """
+    import csv
+    import io
+    from datetime import timedelta
+    from urllib.parse import quote
+
+    from fastapi import Response
+
+    from app.models import BodyLog
+
+    if days not in EXPORT_PERIODS:
+        raise HTTPException(400, "期間を選んでね")
+    team = session.get(Team, user.team_id)
+    positions = services.positions_for(team.sport)
+    players = [u for u in services.team_users(session, user.team_id).values() if u.active and u.role == "member"]
+    query = select(BodyLog).where(BodyLog.user_id.in_([u.id for u in players])) if players else None
+    if query is not None and days:
+        query = query.where(BodyLog.day >= clock.today() - timedelta(days=days - 1))
+    logs = session.exec(query.order_by(BodyLog.day)).all() if query is not None else []
+
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\r\n")
+    writer.writerow(["選手名", "記録した日付", "体重(kg)", "体脂肪率(%)"])
+    groups = [(p, [u for u in players if u.position == p]) for p in positions]
+    groups.append(("未設定" if positions else "選手", [u for u in players if u.position not in positions]))
+    for label, members in groups:
+        if not members:
+            continue
+        writer.writerow([label])  # ポジションの 切りかわり
+        for member in sorted(members, key=lambda u: u.name):
+            mine = [log for log in logs if log.user_id == member.id]
+            if not mine:
+                writer.writerow([member.name, "", "", ""])
+            for log in mine:
+                writer.writerow([member.name, log.day.strftime("%Y/%m/%d"),
+                                 f"{log.weight:g}" if log.weight is not None else "", f"{log.body_fat:g}" if log.body_fat is not None else ""])
+    filename = f"体重_{EXPORT_PERIODS[days]}_{clock.today().isoformat()}.csv"
+    return Response("﻿" + out.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"})
